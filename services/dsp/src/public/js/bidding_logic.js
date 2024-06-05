@@ -51,5 +51,15 @@ function reportWin(
     sellerSignals,
     browserSignals,
   });
+  const additionalQueryParams = browserSignals.renderURL.substring(
+    browserSignals.renderURL.indexOf('?') + 1);
+  registerAdBeacon({
+    'impression':
+      `${browserSignals.interestGroupOwner}/reporting?report=impression&${additionalQueryParams}`,
+    'reserved.top_navigation_start':
+      `${browserSignals.interestGroupOwner}/reporting?report=top_navigation_start&${additionalQueryParams}`,
+    'reserved.top_navigation_commit':
+    `${browserSignals.interestGroupOwner}/reporting?report=top_navigation_commit&${additionalQueryParams}`,
+  });
   sendReportTo(browserSignals.interestGroupOwner + '/reporting?report=win');
 }

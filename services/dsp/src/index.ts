@@ -60,7 +60,6 @@ app.use((req, res, next) => {
 });
 
 app.use(express.urlencoded({extended: true}));
-
 app.use(express.json()); // To parse the incoming requests with JSON payloads
 
 app.use((req, res, next) => {
@@ -133,14 +132,26 @@ app.get('/interest-group.json', async (req: Request, res: Response) => {
     return res.sendStatus(400);
   }
 
-  const imageCreative = new URL(`https://${DSP_HOST}:${EXTERNAL_PORT}/ads`);
-  imageCreative.searchParams.append('advertiser', advertiser as string);
-  imageCreative.searchParams.append('id', id as string);
-  const videoCreative = new URL(
-    `https://${DSP_HOST}:${EXTERNAL_PORT}/html/video-ad-creative.html`,
-  );
-  const renderUrl =
-    adType === 'video' ? videoCreative : imageCreative.toString();
+  let renderUrl = '';
+  switch(adType) {
+    case 'video':
+      renderUrl = new URL(
+        `https://${DSP_HOST}:${EXTERNAL_PORT}/html/video-ad-creative.html`,
+      ).toString();
+      break;
+    case '3pas':
+      const sspCreative = new URL(`https://${SSP_HOST}:${EXTERNAL_PORT}/ads`);
+      sspCreative.searchParams.append("advertiser", advertiser as string);
+      sspCreative.searchParams.append("id", id as string);
+      renderUrl = sspCreative.toString();
+      break;
+    default:
+      const imageCreative = new URL(`https://${DSP_HOST}:${EXTERNAL_PORT}/ads`);
+      imageCreative.searchParams.append('advertiser', advertiser as string);
+      imageCreative.searchParams.append('id', id as string);
+      renderUrl = imageCreative.toString();
+      break;
+  }
 
   const owner = new URL(`https://${DSP_HOST}:${EXTERNAL_PORT}`);
   const biddingLogicUrl = new URL(
@@ -205,99 +216,147 @@ app.get('/bidding_signal.json', async (req: Request, res: Response) => {
 // app.get("/daily_update_url", async (req: Request, res: Response) => {
 // })
 
+app.get('/reporting', async (req: Request, res: Response) => {
+  console.log(`Event-level report received: ${req.originalUrl}`);
+  res.status(200).send(`Event-level report received: ${JSON.stringify(req.query)}`);
+  Reports.push(req.query);
+});
+
+app.post('/reporting', async (req: Request, res: Response) => {
+  console.log(`Event-level report received: ${req.originalUrl}`);
+  const report = {
+    ...req.query,
+    ...req.body,
+  };
+  Reports.push(report);
+  if (req.headers['attribution-reporting-eligible']) {
+    const query = Object.entries(req.query)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('&');
+    const redirectUrl = `https://privacy-sandbox-demos-ssp.dev/register-source?${query}`;
+    if (registerNavigationAttributionSourceIfApplicable(req, res)) {
+      console.log(`Navigation source registered, redirecting to: ${redirectUrl}`);
+      res.redirect(redirectUrl);
+      // res.status(200).send(`Event-level report received and navigation source registered: ${JSON.stringify(report)}`);
+    } else if (registerEventAttributionSourceIfApplicable(req, res)) {
+      console.log(`Evemt source registered, redirecting to: ${redirectUrl}`);
+      res.redirect(redirectUrl);
+      // res.status(200).send(`Event-level report received and event source registered: ${JSON.stringify(report)}`);
+    }
+  } else {
+    res.status(200).send(`Event-level report received: ${JSON.stringify(report)}`);
+  }
+});
+
 // ************************************************************************
 // [START] Section for Attribution Reporting API Code ***
 // ************************************************************************
-app.get('/register-source', async (req: Request, res: Response) => {
+
+const registerNavigationAttributionSourceIfApplicable = (req: Request, res: Response) => {
+  if (!req.headers['attribution-reporting-eligible'] ||
+    !('navigation-source' in decodeDict(req.headers['attribution-reporting-eligible'] as string))) {
+    return false;
+  }
+  const advertiser = req.query.advertiser as string;
+  const id = req.query.id as string;
+  console.log('Registering navigation source attribution for', {advertiser, id});
+  const destination = `https://${advertiser}`;
+  const source_event_id = sourceEventId();
+  const debug_key = debugKey();
+  const AttributionReportingRegisterSource = {
+    demo_host: 'dsp',
+    destination,
+    source_event_id,
+    debug_key,
+    debug_reporting: true,  // Enable verbose debug reports.
+    /*
+    aggregation_keys: {
+      quantity: sourceKeyPiece({
+        type: SOURCE_TYPE['click'], // click attribution
+        advertiser: ADVERTISER[advertiser],
+        publisher: PUBLISHER['news'],
+        id: Number(`0x${id}`),
+        dimension: DIMENSION['quantity'],
+      }),
+      gross: sourceKeyPiece({
+        type: SOURCE_TYPE['click'], // click attribution
+        advertiser: ADVERTISER[advertiser],
+        publisher: PUBLISHER['news'],
+        id: Number(`0x${id}`),
+        dimension: DIMENSION['gross'],
+      }),
+    },
+    */
+  };
+  console.log('Registering navigation source :', {
+    AttributionReportingRegisterSource,
+  });
+  res.setHeader(
+    'Attribution-Reporting-Register-Source',
+    JSON.stringify(AttributionReportingRegisterSource),
+  );
+  return true;
+};
+
+const registerEventAttributionSourceIfApplicable = (req: Request, res: Response) => {
+  if (!req.headers['attribution-reporting-eligible'] ||
+    !('event-source' in decodeDict(req.headers['attribution-reporting-eligible'] as string))) {
+    return false;
+  }
   const advertiser: string = req.query.advertiser as string;
   const id: string = req.query.id as string;
+  console.log('Registering event source attribution for', {advertiser, id});
+  const destination = `https://${advertiser}`;
+  const source_event_id = sourceEventId();
+  const debug_key = debugKey();
+  const AttributionReportingRegisterSource = {
+    demo_host: 'dsp',
+    destination,
+    source_event_id,
+    debug_key,
+    debug_reporting: true,  // Enable verbose debug reports.
+    /*
+    aggregation_keys: {
+      quantity: sourceKeyPiece({
+        type: SOURCE_TYPE['view'], // view attribution
+        advertiser: ADVERTISER[advertiser],
+        publisher: PUBLISHER['news'],
+        id: Number(`0x${id}`),
+        dimension: DIMENSION['quantity'],
+      }),
+      gross: sourceKeyPiece({
+        type: SOURCE_TYPE['view'], // view attribution
+        advertiser: ADVERTISER[advertiser],
+        publisher: PUBLISHER['news'],
+        id: Number(`0x${id}`),
+        dimension: DIMENSION['gross'],
+      }),
+    },
+    */
+  };
+  console.log('Registering event source :', {
+    AttributionReportingRegisterSource,
+  });
+  res.setHeader(
+    'Attribution-Reporting-Register-Source',
+    JSON.stringify(AttributionReportingRegisterSource),
+  );
+  return true;
+};
 
-  console.log('Registering source attribution for', {advertiser, id});
-  if (req.headers['attribution-reporting-eligible']) {
-    //const are = req.headers["attribution-reporting-eligible"].split(",").map((e) => e.trim())
-    const are = decodeDict(
-      req.headers['attribution-reporting-eligible'] as string,
-    );
-
-    // register navigation source
-    if ('navigation-source' in are) {
-      const destination = `https://${advertiser}`;
-      const source_event_id = sourceEventId();
-      const debug_key = debugKey();
-      const AttributionReportingRegisterSource = {
-        destination,
-        source_event_id,
-        debug_key,
-        aggregation_keys: {
-          quantity: sourceKeyPiece({
-            type: SOURCE_TYPE['click'], // click attribution
-            advertiser: ADVERTISER[advertiser],
-            publisher: PUBLISHER['news'],
-            id: Number(`0x${id}`),
-            dimension: DIMENSION['quantity'],
-          }),
-          gross: sourceKeyPiece({
-            type: SOURCE_TYPE['click'], // click attribution
-            advertiser: ADVERTISER[advertiser],
-            publisher: PUBLISHER['news'],
-            id: Number(`0x${id}`),
-            dimension: DIMENSION['gross'],
-          }),
-        },
-      };
-
-      console.log('Registering navigation source :', {
-        AttributionReportingRegisterSource,
-      });
-      res.setHeader(
-        'Attribution-Reporting-Register-Source',
-        JSON.stringify(AttributionReportingRegisterSource),
-      );
-      res.status(200).send('attribution nevigation (click) source registered');
-    }
-
-    // register event source
-    else if ('event-source' in are) {
-      const destination = `https://${advertiser}`;
-      const source_event_id = sourceEventId();
-      const debug_key = debugKey();
-      const AttributionReportingRegisterSource = {
-        destination,
-        source_event_id,
-        debug_key,
-        aggregation_keys: {
-          quantity: sourceKeyPiece({
-            type: SOURCE_TYPE['view'], // view attribution
-            advertiser: ADVERTISER[advertiser],
-            publisher: PUBLISHER['news'],
-            id: Number(`0x${id}`),
-            dimension: DIMENSION['quantity'],
-          }),
-          gross: sourceKeyPiece({
-            type: SOURCE_TYPE['view'], // view attribution
-            advertiser: ADVERTISER[advertiser],
-            publisher: PUBLISHER['news'],
-            id: Number(`0x${id}`),
-            dimension: DIMENSION['gross'],
-          }),
-        },
-      };
-
-      console.log('Registering event source :', {
-        AttributionReportingRegisterSource,
-      });
-      res.setHeader(
-        'Attribution-Reporting-Register-Source',
-        JSON.stringify(AttributionReportingRegisterSource),
-      );
-      res.status(200).send('attribution event (view) source registered');
-    } else {
-      res
-        .status(400)
-        .send("'Attribution-Reporting-Eligible' header is malformed"); // just send back response header. no content.
-    }
+app.get('/register-source', async (req: Request, res: Response) => {
+  if (!req.headers['attribution-reporting-eligible']) {
+    res.status(400).send("'Attribution-Reporting-Eligible' header is missing");
+    return;
+  }
+  if (registerNavigationAttributionSourceIfApplicable(req, res)) {
+    res.status(200).send('attribution nevigation (click) source registered');
+  } else if (registerEventAttributionSourceIfApplicable(req, res)) {
+    res.status(200).send('attribution event (view) source registered');
   } else {
-    res.status(400).send("'Attribution-Reporting-Eligible' header is missing"); // just send back response header. no content.
+    res
+      .status(400)
+      .send("'Attribution-Reporting-Eligible' header is malformed");    
   }
 });
 

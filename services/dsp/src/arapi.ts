@@ -159,12 +159,14 @@ export function decodeBucket(buffer: ArrayBuffer) {
 
 export function sourceEventId() {
   // 64bit dummy value
-  return ((1n << 64n) - 1n).toString();
+  return Math.random().toString().substring(2).replace(/^0/, '');
+  // return ((1n << 64n) - 1n).toString();
 }
 
 export function debugKey(): string {
   // 64bit dummy value
-  return ((1n << 64n) - 2n).toString();
+  return Math.random().toString().substring(2).replace(/^0/, '');
+  // return ((1n << 64n) - 2n).toString();
 }
 
 function key_from_value(object: any, value: any) {
