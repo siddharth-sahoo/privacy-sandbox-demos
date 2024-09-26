@@ -15,7 +15,7 @@
  */
 
 // DSP
-import express, {Application, Request, Response} from 'express';
+import express, {Application, NextFunction, Request, Response} from 'express';
 import cbor from 'cbor';
 import {decodeDict} from 'structured-field-values';
 import {
@@ -35,32 +35,26 @@ const {
   EXTERNAL_PORT,
   PORT,
   DSP_HOST,
-  DSP_TOKEN,
+  DSP_A_HOST,
+  DSP_B_HOST,
   DSP_DETAIL,
-  SSP_HOST,
+  DSP_A_DETAIL,
+  DSP_B_DETAIL,
   SHOP_HOST,
 } = process.env;
 
 // In-memory storage for all reports
 const Reports: any[] = [];
 // Clear in-memory storage every 10 min
-setInterval(
-  () => {
-    Reports.length = 0;
-  },
-  1000 * 60 * 10,
-);
+setInterval(() => {
+  Reports.length = 0;
+}, 1000 * 60 * 10);
 
 const app: Application = express();
 app.use(express.urlencoded({extended: true}));
 app.use(express.json());
 
-app.use((req, res, next) => {
-  res.setHeader('Origin-Trial', DSP_TOKEN as string);
-  next();
-});
-
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   // Enable transitional debug reports for ARA.
   res.cookie('ar_debug', '1', {
     sameSite: 'none',
@@ -72,7 +66,7 @@ app.use((req, res, next) => {
 
 app.use(
   express.static('src/public', {
-    setHeaders: (res: Response, path, stat) => {
+    setHeaders: (res: Response, path: string) => {
       if (path.endsWith('bidding_logic.js')) {
         return res.set('X-Allow-FLEDGE', 'true');
       }
@@ -83,7 +77,7 @@ app.use(
   }),
 );
 
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.get('sec-fetch-dest') === 'fencedframe') {
     res.setHeader('Supports-Loading-Mode', 'fenced-frame');
   }
@@ -94,52 +88,54 @@ app.set('view engine', 'ejs');
 app.set('views', 'src/views');
 
 app.get('/', async (req: Request, res: Response) => {
-  const title = DSP_DETAIL;
-  res.render('index', {title, DSP_HOST, SHOP_HOST, EXTERNAL_PORT});
+  res.render('index', getTemplateVariables(req.hostname));
 });
 
-app.get('/reports', async (req, res) => {
-  res.render('reports', {title: 'Report', Reports});
+app.get('/reports', async (req: Request, res: Response) => {
+  const hostDetails = getTemplateVariables(req.hostname);
+  hostDetails.set('title', `Reports for ${req.hostname}`);
+  hostDetails.set('Reports', Reports);
+  res.render('reports', hostDetails);
 });
 
-app.get('/ads', async (req, res) => {
+app.get('/ads', async (req: Request, res: Response) => {
   const {advertiser, id} = req.query;
+  const currHost = req.hostname;
   console.log('Loading frame content : ', {advertiser, id});
   const title = `Your special ads from ${advertiser}`;
-  const move = new URL(`https://${advertiser}:${EXTERNAL_PORT}/items/${id}`);
+  const destination = new URL(
+    `https://${advertiser}:${EXTERNAL_PORT}/items/${id}`,
+  );
   const creative = new URL(`https://${advertiser}:${EXTERNAL_PORT}/ads/${id}`);
   const registerSource = new URL(
-    `https://${DSP_HOST}:${EXTERNAL_PORT}/register-source`,
+    `https://${currHost}:${EXTERNAL_PORT}/register-source`,
   );
   registerSource.searchParams.append('advertiser', advertiser as string);
   registerSource.searchParams.append('id', id as string);
-  res.render('ads', {title, move, creative, registerSource});
+  res.render('ads', {title, destination, creative, registerSource});
 });
 
 app.get('/join-ad-interest-group.html', async (req: Request, res: Response) => {
-  const title = 'Join Ad Interest Group';
-  res.render('join-ad-interest-group', {
-    title,
-    DSP_TOKEN,
-    DSP_HOST,
-    EXTERNAL_PORT,
-  });
+  const hostDetails = getTemplateVariables(req.hostname);
+  hostDetails.set('title', 'Join Ad Interest Group');
+  res.render('join-ad-interest-group', hostDetails);
 });
 
 app.get('/interest-group.json', async (req: Request, res: Response) => {
   const {advertiser, id, adType} = req.query;
+  const currHost = req.hostname;
   if (!advertiser || !id) {
     return res.sendStatus(400);
   }
   res.json({
     'name': advertiser,
-    'owner': new URL(`https://${DSP_HOST}:${EXTERNAL_PORT}`),
+    'owner': new URL(`https://${currHost}:${EXTERNAL_PORT}`),
     // x-allow-fledge: true
     'biddingLogicURL': new URL(
-      `https://${DSP_HOST}:${EXTERNAL_PORT}/js/bidding_logic.js`,
+      `https://${currHost}:${EXTERNAL_PORT}/js/bidding_logic.js`,
     ),
     'trustedBiddingSignalsURL': new URL(
-      `https://${DSP_HOST}:${EXTERNAL_PORT}/bidding_signal.json`,
+      `https://${currHost}:${EXTERNAL_PORT}/bidding_signal.json`,
     ),
     'trustedBiddingSignalsKeys': [
       'trustedBiddingSignalsKeys-1',
@@ -147,7 +143,7 @@ app.get('/interest-group.json', async (req: Request, res: Response) => {
     ],
     // Daily update is not implemented yet.
     // 'updateURL': new URL(
-    //  `https://${DSP_HOST}:${EXTERNAL_PORT}/daily_update_url`,
+    //  `https://${currHost}:${EXTERNAL_PORT}/daily_update_url`,
     // ),
     'userBiddingSignals': {
       'user_bidding_signals': 'user_bidding_signals',
@@ -161,6 +157,7 @@ app.get('/interest-group.json', async (req: Request, res: Response) => {
     'ads': [
       {
         'renderURL': getRenderUrl(
+          currHost,
           advertiser as string,
           id as string,
           adType as string,
@@ -199,7 +196,7 @@ app.get('/bidding_signal.json', async (req: Request, res: Response) => {
 // app.get("/daily_update_url", async (req: Request, res: Response) => {
 // })
 
-app.get('/private-aggregation', (req, res) => {
+app.get('/private-aggregation', (req: Request, res: Response) => {
   const bucket = req.query.bucket;
   const cloudEnv = req.query.cloudEnv;
   console.log(`${bucket}, ${cloudEnv}`);
@@ -434,18 +431,44 @@ app.post(
 // ************************************************************************
 // Miscellaneous helper functions
 // ************************************************************************
+/** Returns EJS template variables for current host. */
+const getTemplateVariables = (currHost: string): Map<string, any> => {
+  const hostDetails = new Map<string, any>([
+    ['currHost', currHost],
+    ['EXTERNAL_PORT', EXTERNAL_PORT],
+    ['PORT', PORT],
+    ['SHOP_HOST', SHOP_HOST],
+  ]);
+  switch (currHost) {
+    case DSP_HOST:
+      hostDetails.set('title', DSP_DETAIL);
+      break;
+    case DSP_A_HOST:
+      hostDetails.set('title', DSP_A_DETAIL);
+      break;
+    case DSP_B_HOST:
+      hostDetails.set('title', DSP_B_DETAIL);
+      break;
+    default:
+      hostDetails.set('title', 'FIX: UNKNOWN DSP HOST');
+      break;
+  }
+  return hostDetails;
+};
+
 /** Constructs render URL to use in Interest Groups. */
 const getRenderUrl = (
+  currHost: string,
   advertiser: string,
   productId: string,
   adType: string,
 ): string => {
   if (adType === 'video') {
     return new URL(
-      `https://${DSP_HOST}:${EXTERNAL_PORT}/html/video-ad-creative.html`,
+      `https://${currHost}:${EXTERNAL_PORT}/html/video-ad-creative.html`,
     ).toString();
   } else {
-    const imageCreative = new URL(`https://${DSP_HOST}:${EXTERNAL_PORT}/ads`);
+    const imageCreative = new URL(`https://${currHost}:${EXTERNAL_PORT}/ads`);
     imageCreative.searchParams.append('advertiser', advertiser);
     imageCreative.searchParams.append('id', productId);
     const sizeMacro1 = 'adSize1={%AD_WIDTH%}x{%AD_HEIGHT%}';

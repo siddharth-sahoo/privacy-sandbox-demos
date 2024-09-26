@@ -68,11 +68,10 @@ services:
     image: gcr.io/privacy-sandbox-demos/dsp:latest
     build: ./services/dsp
     container_name: "sandcastle_dsp"
-    hostname: ${DSP_HOST:?err}
     env_file:
       - .env
     volumes:
-      - ./services/dsp:/workspace
+      - ./services/dsp:/workspac
       - dsp_node_modules:/workspace/node_modules
     networks:
       - adnetwork
@@ -81,7 +80,6 @@ services:
     image: gcr.io/privacy-sandbox-demos/ssp:latest
     build: ./services/ssp
     container_name: "sandcastle_ssp"
-    hostname: ${SSP_HOST:?err}
     env_file:
       - .env
     volumes:
