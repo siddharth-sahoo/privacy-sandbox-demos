@@ -59,7 +59,7 @@ app.get('/', async (req: Request, res: Response) => {
     SSP_A_HOST,
     SSP_B_HOST,
     AD_SERVER_HOST,
-    SSP_TAG_URL: `https://${SSP_HOST}/ad-tag.js`,
+    SSP_TAG_URL: `https://${SSP_HOST}/ssp-tag.js`,
     AD_SERVER_LIB_URL: `https://${AD_SERVER_HOST}/js/ad-server-lib.js`,
     HEADER_BIDDING_LIB_URL: `https://${NEWS_HOST}/js/header-bidding-lib.js`,
     isMultiSeller: auctionType === 'multi',
