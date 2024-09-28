@@ -14,16 +14,14 @@
  limitations under the License.
  */
 
-// DSP
 import express, {Application, NextFunction, Request, Response} from 'express';
 
 import {CommonRouter} from './common-router.js';
 import {DspRouter} from './dsp-router.js';
 import {EventReportRouter} from './event-report-router.js';
 import {SspRouter} from './ssp-router.js';
-import {getTemplateVariables} from './utils.js';
 
-const {EXTERNAL_PORT, PORT} = process.env;
+const {PORT} = process.env;
 
 const app: Application = express();
 app.use(express.urlencoded({extended: true}));

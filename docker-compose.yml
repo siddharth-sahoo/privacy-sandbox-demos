@@ -208,13 +208,13 @@ services:
       - news
       - shop
       - travel
-      - ad-server
-      - dsp
-      - dsp-a
-      - dsp-b
       - ssp
       - ssp-a
       - ssp-b
+      - dsp
+      - dsp-a
+      - dsp-b
+      - ad-server
       - collector
       - topics
       - topics-server
