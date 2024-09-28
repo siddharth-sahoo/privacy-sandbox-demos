@@ -13,15 +13,18 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
+
 import express, {Request, Response} from 'express';
 import {getTemplateVariables} from './utils.js';
 
 const {EXTERNAL_PORT} = process.env;
+export const DspRouter = express.Router();
 
-export const dspRouter = express.Router();
-
+// ************************************************************************
+// HTTP handlers
+// ************************************************************************
 /** Iframe document used as context to join interest group. */
-dspRouter.get(
+DspRouter.get(
   '/join-ad-interest-group.html',
   async (req: Request, res: Response) => {
     res.render(
@@ -32,7 +35,7 @@ dspRouter.get(
 );
 
 /** Returns the interest group to join on advertiser page. */
-dspRouter.get('/interest-group.json', async (req: Request, res: Response) => {
+DspRouter.get('/interest-group.json', async (req: Request, res: Response) => {
   const {advertiser, itemId, adType} = req.query;
   const currHost = req.hostname;
   if (!advertiser || !itemId) {
@@ -86,7 +89,7 @@ dspRouter.get('/interest-group.json', async (req: Request, res: Response) => {
 });
 
 /** Simplified BYOS implementation for Key-Value Service. */
-dspRouter.get('/bidding-signal.json', async (req: Request, res: Response) => {
+DspRouter.get('/bidding-signal.json', async (req: Request, res: Response) => {
   console.log('Returning trusted bidding signals: ', req.originalUrl);
   res.setHeader('X-Allow-FLEDGE', 'true');
   res.setHeader('X-fledge-bidding-signals-format-version', '2');
@@ -107,9 +110,23 @@ dspRouter.get('/bidding-signal.json', async (req: Request, res: Response) => {
 });
 
 // TODO: Implement
-// dspRouter.get("/daily-update-url", async (req: Request, res: Response) => {
+// DspRouter.get("/daily-update-url", async (req: Request, res: Response) => {
 // })
 
+/** Simple E2E Private Aggregation Demo */
+DspRouter.get('/private-aggregation', (req: Request, res: Response) => {
+  const bucket = req.query.bucket;
+  const cloudEnv = req.query.cloudEnv;
+  console.log(`${bucket}, ${cloudEnv}`);
+  res.render('dsp/private-aggregation', {
+    bucket: bucket,
+    cloudEnv: cloudEnv,
+  });
+});
+
+// ************************************************************************
+// DSP helper functions
+// ************************************************************************
 /** Constructs render URL to use in Interest Groups. */
 const getRenderUrl = (
   currHost: string,
@@ -130,14 +147,3 @@ const getRenderUrl = (
     return `${imageCreative.toString()}&${sizeMacro1}&${sizeMacro2}`;
   }
 };
-
-/** Simple E2E Private Aggregation Demo */
-dspRouter.get('/private-aggregation', (req: Request, res: Response) => {
-  const bucket = req.query.bucket;
-  const cloudEnv = req.query.cloudEnv;
-  console.log(`${bucket}, ${cloudEnv}`);
-  res.render('dsp/private-aggregation', {
-    bucket: bucket,
-    cloudEnv: cloudEnv,
-  });
-});

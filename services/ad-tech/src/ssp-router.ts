@@ -17,13 +17,18 @@
 import express, {Request, Response} from 'express';
 
 const {DSP_HOST, DSP_A_HOST, DSP_B_HOST, EXTERNAL_PORT} = process.env;
-export const sspRouter = express.Router();
+export const SspRouter = express.Router();
 
-sspRouter.get('/run-ad-auction.html', async (req, res) => {
+// ************************************************************************
+// HTTP handlers
+// ************************************************************************
+/** Iframe document used as context to run PAAPI auction. */
+SspRouter.get('/run-ad-auction.html', async (req: Request, res: Response) => {
   res.render('ssp/run-ad-auction');
 });
 
-sspRouter.get('/auction-config.json', async (req, res) => {
+/** Returns the PAAPI auction config. */
+SspRouter.get('/auction-config.json', async (req: Request, res: Response) => {
   const {adType} = req.query;
   const sspOrigin = new URL(
     `https://${req.hostname}:${EXTERNAL_PORT}`,

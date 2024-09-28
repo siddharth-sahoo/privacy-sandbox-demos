@@ -16,7 +16,7 @@
 
 (async () => {
   // Construct iframe URL using current script origin.
-  const $script = document.querySelector('script.dsp_tag');
+  const $script = document.currentScript;
   const iframeSrc = new URL($script.src);
   iframeSrc.pathname = 'dsp/join-ad-interest-group.html';
   // Append query parameters for current item.

@@ -16,7 +16,7 @@
 
 (async () => {
   // Construct iframe URL from current script origin.
-  const $script = document.querySelector('.ssp_tag');
+  const $script = document.currentScript;
   const iframeSrc = new URL($script.src);
   iframeSrc.pathname = '/ssp/run-ad-auction.html';
   // Append document query params to request.

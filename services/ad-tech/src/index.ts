@@ -17,9 +17,10 @@
 // DSP
 import express, {Application, NextFunction, Request, Response} from 'express';
 
-import {dspRouter} from './dsp-router.js';
-import {eventReportRouter} from './event-report-router.js';
-import {sspRouter} from './ssp-router.js';
+import {CommonRouter} from './common-router.js';
+import {DspRouter} from './dsp-router.js';
+import {EventReportRouter} from './event-report-router.js';
+import {SspRouter} from './ssp-router.js';
 import {getTemplateVariables} from './utils.js';
 
 const {EXTERNAL_PORT, PORT} = process.env;
@@ -68,37 +69,10 @@ app.use(
 app.set('view engine', 'ejs');
 app.set('views', 'src/views');
 
-app.use('/', eventReportRouter);
-app.use('/dsp', dspRouter);
-app.use('/ssp', sspRouter);
-
-app.get('/', async (req: Request, res: Response) => {
-  if (req.hostname.includes('ssp')) {
-    res.render('ssp/index', getTemplateVariables(req.hostname));
-  } else {
-    res.render('dsp/index', getTemplateVariables(req.hostname));
-  }
-});
-
-/** Used as render URL in interest groups. */
-app.get('/ads', async (req: Request, res: Response) => {
-  const {advertiser, itemId} = req.query;
-  const currHost = req.hostname;
-  console.log('Loading ad creative: ', req.query);
-  const title = `Your special ads from ${advertiser}`;
-  const destination = new URL(
-    `https://${advertiser}:${EXTERNAL_PORT}/items/${itemId}`,
-  );
-  const creative = new URL(
-    `https://${advertiser}:${EXTERNAL_PORT}/ads/${itemId}`,
-  );
-  const registerSource = new URL(
-    `https://${currHost}:${EXTERNAL_PORT}/register-source`,
-  );
-  registerSource.searchParams.append('advertiser', advertiser as string);
-  registerSource.searchParams.append('itemId', itemId as string);
-  res.render('ads', {title, destination, creative, registerSource});
-});
+app.use('/', CommonRouter);
+app.use('/', EventReportRouter);
+app.use('/dsp', DspRouter);
+app.use('/ssp', SspRouter);
 
 app.listen(PORT, function () {
   console.log(`Listening on port ${PORT}`);

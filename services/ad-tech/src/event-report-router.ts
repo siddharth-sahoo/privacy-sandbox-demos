@@ -32,7 +32,7 @@ import {
 } from './arapi.js';
 import {getTemplateVariables} from './utils.js';
 
-export const eventReportRouter = express.Router();
+export const EventReportRouter = express.Router();
 
 // In-memory storage for all reports
 const Reports: any[] = [];
@@ -45,14 +45,16 @@ export const pushEventLevelReport = (report: any) => {
   Reports.push(report);
 };
 
+// ************************************************************************
 // HTTP handlers
+// ************************************************************************
 /** Show reports from in-memory storage. */
-eventReportRouter.get('/reports', async (req: Request, res: Response) => {
+EventReportRouter.get('/reports', async (req: Request, res: Response) => {
   const hostDetails = getTemplateVariables(req.hostname, 'Reports');
   res.render('reports', {Reports, ...hostDetails});
 });
 
-eventReportRouter.get('/reporting', async (req: Request, res: Response) => {
+EventReportRouter.get('/reporting', async (req: Request, res: Response) => {
   handleEventLevelReport(
     req,
     res,
@@ -64,7 +66,7 @@ eventReportRouter.get('/reporting', async (req: Request, res: Response) => {
   );
 });
 
-eventReportRouter.post('/reporting', async (req: Request, res: Response) => {
+EventReportRouter.post('/reporting', async (req: Request, res: Response) => {
   handleEventLevelReport(
     req,
     res,
@@ -82,7 +84,7 @@ eventReportRouter.post('/reporting', async (req: Request, res: Response) => {
 // ************************************************************************
 // Attribution Reporting HTTP handlers
 // ************************************************************************
-eventReportRouter.get(
+EventReportRouter.get(
   '/register-source',
   async (req: Request, res: Response) => {
     if (!req.headers['attribution-reporting-eligible']) {
@@ -103,7 +105,7 @@ eventReportRouter.get(
   },
 );
 
-eventReportRouter.get(
+EventReportRouter.get(
   '/register-trigger',
   async (req: Request, res: Response) => {
     const id: string = req.query.itemId as string;
@@ -156,7 +158,10 @@ eventReportRouter.get(
   },
 );
 
-eventReportRouter.post(
+// ************************************************************************
+// Attribution Reporting well-known HTTP handlers
+// ************************************************************************
+EventReportRouter.post(
   '/.well-known/attribution-reporting/report-event-attribution',
   async (req: Request, res: Response) => {
     console.log(
@@ -172,7 +177,7 @@ eventReportRouter.post(
   },
 );
 
-eventReportRouter.post(
+EventReportRouter.post(
   '/.well-known/attribution-reporting/debug/report-event-attribution',
   async (req: Request, res: Response) => {
     console.log(
@@ -188,7 +193,7 @@ eventReportRouter.post(
   },
 );
 
-eventReportRouter.post(
+EventReportRouter.post(
   '/.well-known/attribution-reporting/debug/report-aggregate-attribution',
   async (req: Request, res: Response) => {
     const debugReport = req.body;
@@ -226,7 +231,7 @@ eventReportRouter.post(
   },
 );
 
-eventReportRouter.post(
+EventReportRouter.post(
   '/.well-known/attribution-reporting/report-aggregate-attribution',
   async (req: Request, res: Response) => {
     const report = req.body;
@@ -245,9 +250,9 @@ eventReportRouter.post(
 );
 
 // ************************************************************************
-// Private Aggregation HTTP handlers
+// Private Aggregation well-known HTTP handlers
 // ************************************************************************
-eventReportRouter.post(
+EventReportRouter.post(
   '/.well-known/private-aggregation/report-shared-storage',
   (req: Request, res: Response) => {
     console.log(
@@ -263,7 +268,7 @@ eventReportRouter.post(
   },
 );
 
-eventReportRouter.post(
+EventReportRouter.post(
   '/.well-known/private-aggregation/debug/report-shared-storage',
   (req: Request, res: Response) => {
     console.log(
@@ -279,6 +284,9 @@ eventReportRouter.post(
   },
 );
 
+// ************************************************************************
+// Reporting helper functions
+// ************************************************************************
 /** Consumes event-level reports and integrates with ARA if applicable */
 const handleEventLevelReport = (req: Request, res: Response, report: any) => {
   console.log('Event-level report received: ', req.originalUrl, report);
@@ -320,9 +328,6 @@ const handleAttributionReporting = (req: Request, res: Response) => {
   }
 };
 
-// ************************************************************************
-// Attribution Reporting helper functions
-// ************************************************************************
 /** Registers click-thru attribution if applicable. */
 const registerNavigationAttributionSourceIfApplicable = (
   req: Request,
