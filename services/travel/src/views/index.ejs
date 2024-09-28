@@ -8,8 +8,6 @@
   <link rel="stylesheet" href="/css/global.css" />
   <link rel="icon" href="/img/spy.svg" />
   <script src="/js/main.js"></script>
-
-  <meta http-equiv="origin-trial" content="<%= TRAVEL_TOKEN %>">
 </head>
 
 <body>
@@ -39,9 +37,20 @@
       <li><a href=<%= `https://${NEWS_HOST}:${EXTERNAL_PORT}` %>>>news</a></p>
     </ul>
   </footer>
-  <!--
-    FIXME:  <script class="dsp_tag" data-advertiser="privacy-sandbox-demos-travel.dev" src="https://privacy-sandbox-demos-dsp.dev/dsp-tag.js"></script>
-  -->
+  <script>
+    function buildDspScriptTag(host) {
+      const scriptEl = document.createElement('script')
+      scriptEl.src = `https://${host}:<%= EXTERNAL_PORT %>/dsp-tag.js`
+      scriptEl.className = 'dsp_tag'
+      scriptEl.async = true
+      scriptEl.defer = true
+      scriptEl.dataset.advertiser = '<%= TRAVEL_HOST %>'
+      return scriptEl
+    }
+    document.body.appendChild(buildDspScriptTag('<%= DSP_HOST %>'))
+    document.body.appendChild(buildDspScriptTag('<%= DSP_A_HOST %>'))
+    document.body.appendChild(buildDspScriptTag('<%= DSP_B_HOST %>'))
+  </script>
 </body>
 
 </html>

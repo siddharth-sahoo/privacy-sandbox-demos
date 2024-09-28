@@ -16,28 +16,33 @@
 
 import express, {Application, Request, Response} from 'express';
 
-const {EXTERNAL_PORT, PORT, TRAVEL_TOKEN, TRAVEL_DETAIL, NEWS_HOST} =
-  process.env;
+const {EXTERNAL_PORT, PORT} = process.env;
+const {TRAVEL_HOST, TRAVEL_DETAIL, NEWS_HOST} = process.env;
+const {DSP_HOST, DSP_A_HOST, DSP_B_HOST} = process.env;
 
 const app: Application = express();
-
-app.use((req, res, next) => {
-  res.setHeader('Origin-Trial', TRAVEL_TOKEN as string);
-  next();
-});
 app.use(express.static('src/public'));
 app.set('view engine', 'ejs');
 app.set('views', 'src/views');
 
+/** Main index page containing DSP tags. */
 app.get('/', async (req: Request, res: Response) => {
-  const title = TRAVEL_DETAIL;
-  const params = {
-    title,
-    TRAVEL_TOKEN,
-    NEWS_HOST,
+  res.render('index', {
+    title: TRAVEL_DETAIL,
     EXTERNAL_PORT,
-  };
-  res.render('index', params);
+    NEWS_HOST,
+    TRAVEL_HOST,
+    DSP_HOST,
+    DSP_A_HOST,
+    DSP_B_HOST,
+  });
+});
+
+// Serves a static ad creative for all requests from ad-tech.
+app.get('/ads', async (req: Request, res: Response) => {
+  const imgPath = '/img/emoji_u1f3de.svg';
+  console.log('Travel ad redirecting to: ', imgPath);
+  res.redirect(302, imgPath);
 });
 
 app.listen(PORT, function () {

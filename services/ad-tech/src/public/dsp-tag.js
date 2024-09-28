@@ -19,12 +19,11 @@
   const $script = document.currentScript;
   const iframeSrc = new URL($script.src);
   iframeSrc.pathname = 'dsp/join-ad-interest-group.html';
-  // Append query parameters for current item.
-  const advertiser = $script.dataset.advertiser;
-  const itemId = $script.dataset.id;
-  iframeSrc.searchParams.append('advertiser', advertiser);
-  iframeSrc.searchParams.append('itemId', itemId);
-  // Append document query params to request.
+  // Append query parameters from script dataset context.
+  for (const datakey in $script.dataset) {
+    iframeSrc.searchParams.append(datakey, $script.dataset[datakey]);
+  }
+  // Append query params from page URL.
   const currentUrl = new URL(location.href);
   for (const searchParam of currentUrl.searchParams) {
     iframeSrc.searchParams.append(searchParam[0], searchParam[1]);
@@ -33,6 +32,8 @@
   $iframe.width = 1;
   $iframe.height = 1;
   $iframe.src = iframeSrc;
+  $iframe.async = true;
+  $iframe.defer = true;
   $iframe.allow = 'join-ad-interest-group';
   $script.parentElement.insertBefore($iframe, $script.nextSibling);
 })();

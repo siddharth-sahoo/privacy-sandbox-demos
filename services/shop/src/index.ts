@@ -17,17 +17,6 @@
 import express, {NextFunction, Application, Request, Response} from 'express';
 import session from 'express-session';
 import MemoryStoreFactory from 'memorystore';
-
-import {
-  DSP_HOST,
-  DSP_A_HOST,
-  DSP_B_HOST,
-  EXTERNAL_PORT,
-  PORT,
-  SHOP_DETAIL,
-  SHOP_HOST,
-  SSP_HOST,
-} from './env.js';
 import {
   Order,
   addOrder,
@@ -37,7 +26,12 @@ import {
   getItems,
   removeOrder,
   updateOrder,
-} from './lib/items.js';
+} from './items.js';
+
+const {DSP_HOST, DSP_A_HOST, DSP_B_HOST} = process.env;
+const {SSP_HOST, SSP_A_HOST, SSP_B_HOST} = process.env;
+const {SHOP_HOST, SHOP_DETAIL} = process.env;
+const {PORT, EXTERNAL_PORT} = process.env;
 
 const app: Application = express();
 
@@ -71,8 +65,7 @@ app.use(
   }),
 );
 
-app.use((req, res, next) => {
-  // res.setHeader("Origin-Trial", NEWS_TOKEN as string)
+app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Cache-Control', 'private');
   if (!req.session.cart) {
     req.session.cart = [];
@@ -92,7 +85,11 @@ app.locals = {
     const {item, size, quantity} = order;
     return [
       new URL(`https://${DSP_HOST}:${EXTERNAL_PORT}`),
+      new URL(`https://${DSP_A_HOST}:${EXTERNAL_PORT}`),
+      new URL(`https://${DSP_B_HOST}:${EXTERNAL_PORT}`),
       new URL(`https://${SSP_HOST}:${EXTERNAL_PORT}`),
+      new URL(`https://${SSP_A_HOST}:${EXTERNAL_PORT}`),
+      new URL(`https://${SSP_B_HOST}:${EXTERNAL_PORT}`),
     ].map((triggerUrl) => {
       triggerUrl.pathname = '/register-trigger';
       triggerUrl.searchParams.append('id', item.id);
@@ -112,37 +109,24 @@ app.get('/', async (req: Request, res: Response) => {
   });
 });
 
-// serves the static ads creative from shop site (redirected from ssp)
-app.get('/ads/:id', async (req: Request, res: Response) => {
-  const id = req.params.id;
+/** Serves the static ad creative from SHOP site (redirected from ad-tech) */
+app.get('/ads/:id?', async (req: Request, res: Response) => {
+  const id = req.params.id ? req.params.id : '1f6d2';
   const imgPath = `/image/svg/emoji_u${id}.svg`;
-  //res.set("Content-Type", "image/svg+xml")
-  console.log(`redirecting to /image/svg/emoji_u${id}.svg`);
-  res.redirect(301, imgPath);
+  console.log(`Redirecting to /image/svg/emoji_u${id}.svg`);
+  res.redirect(302, imgPath);
 });
 
 app.get('/items/:id', async (req: Request, res: Response) => {
   const {id} = req.params;
   const item = await getItem(id);
-  const isMultiSeller = req.query.auctionType === 'multi';
-
-  const DSP_TAG_URL = new URL(
-    `https://${DSP_HOST}:${EXTERNAL_PORT}/dsp-tag.js`,
-  );
-  const DSP_A_TAG_URL = new URL(
-    `https://${DSP_A_HOST}:${EXTERNAL_PORT}/dsp-tag.js`,
-  );
-  const DSP_B_TAG_URL = new URL(
-    `https://${DSP_B_HOST}:${EXTERNAL_PORT}/dsp-tag.js`,
-  );
-
   res.render('item', {
     item,
-    DSP_TAG_URL,
-    DSP_A_TAG_URL,
-    DSP_B_TAG_URL,
+    EXTERNAL_PORT,
+    DSP_HOST,
+    DSP_A_HOST,
+    DSP_B_HOST,
     SHOP_HOST,
-    isMultiSeller,
   });
 });
 
@@ -156,11 +140,8 @@ app.post('/cart', async (req: Request, res: Response, next: NextFunction) => {
   // load does not happen before session is saved
   req.session.save(function (err: Error) {
     if (err) return next(err);
-    // console.log("Save session before redirect")
-    // console.log(req.session)
     res.redirect(303, '/cart');
   });
-  //res.redirect(303, "/cart")
 });
 
 app.get('/cart', async (req: Request, res: Response) => {
@@ -216,7 +197,6 @@ app.get('/checkout', async (req: Request, res: Response) => {
     return sum + item.price * quantity;
   }, 0);
   const shipping = 40;
-
   await req.session.destroy(() => Promise.resolve());
   res.render('checkout', {
     cart,

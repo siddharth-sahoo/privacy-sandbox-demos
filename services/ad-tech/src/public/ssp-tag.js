@@ -19,15 +19,21 @@
   const $script = document.currentScript;
   const iframeSrc = new URL($script.src);
   iframeSrc.pathname = '/ssp/run-ad-auction.html';
-  // Append document query params to request.
+  // Append query params from script dataset context.
+  for (const datakey in $script.dataset) {
+    iframeSrc.searchParams.append(datakey, $script.dataset[datakey]);
+  }
+  // Append query params from page URL.
   const currentUrl = new URL(location.href);
   for (const searchParam of currentUrl.searchParams) {
     iframeSrc.searchParams.append(searchParam[0], searchParam[1]);
   }
   const $iframe = document.createElement('iframe');
+  $iframe.src = iframeSrc;
   $iframe.width = 300;
   $iframe.height = 250;
-  $iframe.src = iframeSrc;
+  $iframe.async = true;
+  $iframe.defer = true;
   $iframe.setAttribute('scrolling', 'no');
   $iframe.setAttribute('style', 'border: none');
   $iframe.setAttribute('allow', 'attribution-reporting; run-ad-auction');

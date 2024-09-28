@@ -14,17 +14,11 @@
  limitations under the License.
  */
 
-const {
-  EXTERNAL_PORT,
-  PORT,
-  DSP_HOST,
-  DSP_A_HOST,
-  DSP_B_HOST,
-  DSP_DETAIL,
-  DSP_A_DETAIL,
-  DSP_B_DETAIL,
-  SHOP_HOST,
-} = process.env;
+const {PORT, EXTERNAL_PORT, SHOP_HOST} = process.env;
+const {DSP_HOST, DSP_A_HOST, DSP_B_HOST} = process.env;
+const {SSP_HOST, SSP_A_HOST, SSP_B_HOST} = process.env;
+const {DSP_DETAIL, DSP_A_DETAIL, DSP_B_DETAIL} = process.env;
+const {SSP_DETAIL, SSP_A_DETAIL, SSP_B_DETAIL,} = process.env;
 
 /** Returns EJS template variables for current host. */
 export const getTemplateVariables = (
@@ -36,22 +30,28 @@ export const getTemplateVariables = (
     EXTERNAL_PORT,
     PORT,
     SHOP_HOST,
-    title: '',
+    title: `${getAdTechDetail(currHost)} - ${titleMessage}`,
   };
-  switch (currHost) {
-    case DSP_HOST:
-      hostDetails.title = `${titleMessage} - ${DSP_DETAIL}`;
-      break;
-    case DSP_A_HOST:
-      hostDetails.title = `${titleMessage} - ${DSP_A_DETAIL}`;
-      break;
-    case DSP_B_HOST:
-      hostDetails.title = `${titleMessage} - ${DSP_B_DETAIL}`;
-      break;
-    default:
-      hostDetails.title = `${titleMessage} - FIX: UNKNOWN DSP HOST`;
-      break;
-  }
   console.log('Built template context: ', hostDetails);
   return hostDetails;
+};
+
+/** Returns the mapped ad tech label. */
+const getAdTechDetail = (currHost: string): string | undefined => {
+  switch (currHost) {
+    case DSP_HOST:
+      return DSP_DETAIL;
+    case DSP_A_HOST:
+      return DSP_A_DETAIL;
+    case DSP_B_HOST:
+      return DSP_B_DETAIL;
+    case SSP_HOST:
+      return SSP_DETAIL;
+    case SSP_A_HOST:
+      return SSP_A_DETAIL;
+    case SSP_B_HOST:
+      return SSP_B_DETAIL;
+    default:
+      return 'FIXME: UNKNOWN HOST';
+  }
 };

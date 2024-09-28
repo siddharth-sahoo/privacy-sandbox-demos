@@ -36,50 +36,43 @@ DspRouter.get(
 
 /** Returns the interest group to join on advertiser page. */
 DspRouter.get('/interest-group.json', async (req: Request, res: Response) => {
-  const {advertiser, itemId, adType} = req.query;
   const currHost = req.hostname;
-  if (!advertiser || !itemId) {
-    return res.sendStatus(400);
-  }
+  const advertiser = req.query.advertiser || currHost;
   console.log('Returning IG JSON: ', req.query);
   res.json({
-    'name': advertiser,
-    'owner': new URL(`https://${currHost}:${EXTERNAL_PORT}`),
-    // x-allow-fledge: true
-    'biddingLogicURL': new URL(
+    name: advertiser,
+    owner: new URL(`https://${currHost}:${EXTERNAL_PORT}`),
+    biddingLogicURL: new URL(
       `https://${currHost}:${EXTERNAL_PORT}/js/dsp/bidding-logic.js`,
     ),
-    'trustedBiddingSignalsURL': new URL(
+    trustedBiddingSignalsURL: new URL(
       `https://${currHost}:${EXTERNAL_PORT}/dsp/bidding-signal.json`,
     ),
-    'trustedBiddingSignalsKeys': [
+    trustedBiddingSignalsKeys: [
       'trustedBiddingSignalsKeys-1',
       'trustedBiddingSignalsKeys-2',
     ],
     // Daily update is not implemented yet.
-    // 'updateURL': new URL(
+    // updateURL: new URL(
     //  `https://${currHost}:${EXTERNAL_PORT}/dsp/daily-update-url`,
     // ),
-    'userBiddingSignals': {
+    userBiddingSignals: {
       'user_bidding_signals': 'user_bidding_signals',
+      ...req.query, // Copy query from request URL.
     },
-    'adSizes': {
+    adSizes: {
       'medium-rectangle-default': {'width': '300px', 'height': '250px'},
     },
-    'sizeGroups': {
+    sizeGroups: {
       'medium-rectangle': ['medium-rectangle-default'],
     },
-    'ads': [
+    ads: [
       {
-        'renderURL': getRenderUrl(
-          currHost,
-          advertiser as string,
-          itemId as string,
-          adType as string,
-        ),
-        'sizeGroup': 'medium-rectangle',
-        'metadata': {
-          'type': advertiser,
+        renderURL: getRenderUrl(currHost, req.query),
+        sizeGroup: 'medium-rectangle',
+        metadata: {
+          // Custom ad metadata defined by ad-tech.
+          advertiser,
           'adType': 'image',
           'adSizes': [{'width': '300px', 'height': '250px'}],
         },
@@ -90,15 +83,14 @@ DspRouter.get('/interest-group.json', async (req: Request, res: Response) => {
 
 /** Simplified BYOS implementation for Key-Value Service. */
 DspRouter.get('/bidding-signal.json', async (req: Request, res: Response) => {
-  console.log('Returning trusted bidding signals: ', req.originalUrl);
   res.setHeader('X-Allow-FLEDGE', 'true');
   res.setHeader('X-fledge-bidding-signals-format-version', '2');
-  res.json({
-    'keys': {
+  const biddingSignals = {
+    keys: {
       'key1': 'xxxxxxxx',
       'key2': 'yyyyyyyy',
     },
-    'perInterestGroupData': {
+    perInterestGroupData: {
       'name1': {
         'priorityVector': {
           'signal1': 100,
@@ -106,7 +98,9 @@ DspRouter.get('/bidding-signal.json', async (req: Request, res: Response) => {
         },
       },
     },
-  });
+  }
+  console.log('Returning trusted bidding signals: ', req.baseUrl, biddingSignals);
+  res.json(biddingSignals);
 });
 
 // TODO: Implement
@@ -128,20 +122,18 @@ DspRouter.get('/private-aggregation', (req: Request, res: Response) => {
 // DSP helper functions
 // ************************************************************************
 /** Constructs render URL to use in Interest Groups. */
-const getRenderUrl = (
-  currHost: string,
-  advertiser: string,
-  itemId: string,
-  adType: string,
-): string => {
-  if (adType === 'video') {
+const getRenderUrl = (currHost: string, query: any): string => {
+  if ('video' === query.adType) {
     return new URL(
       `https://${currHost}:${EXTERNAL_PORT}/html/video-ad-creative.html`,
     ).toString();
   } else {
+    const advertiser = query.advertiser || currHost;
     const imageCreative = new URL(`https://${currHost}:${EXTERNAL_PORT}/ads`);
     imageCreative.searchParams.append('advertiser', advertiser);
-    imageCreative.searchParams.append('itemId', itemId);
+    if (query.itemId) {
+      imageCreative.searchParams.append('itemId', query.itemId);
+    }
     const sizeMacro1 = 'adSize1={%AD_WIDTH%}x{%AD_HEIGHT%}';
     const sizeMacro2 = 'adSize2=${AD_WIDTH}x${AD_HEIGHT}';
     return `${imageCreative.toString()}&${sizeMacro1}&${sizeMacro2}`;
