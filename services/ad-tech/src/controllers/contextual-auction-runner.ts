@@ -13,7 +13,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-import {EXTERNAL_PORT, PORT} from '../lib/constants.js';
+import {PORT} from '../lib/constants.js';
 
 export const CONTEXTUAL_AUCTION_TIMEOUT_MS = 5000;
 
