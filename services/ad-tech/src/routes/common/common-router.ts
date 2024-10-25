@@ -91,6 +91,8 @@ CommonRouter.get('/js/*.js', (req: Request, res: Response) => {
 
 /** Handler for all other static content: CSS, IMG. */
 CommonRouter.use(express.static('src/public'));
+/** Process requests of application/cbor content-type in raw format. */
+CommonRouter.use(express.raw({type: 'application/cbor'}));
 
 // ************************************************************************
 // Other common HTTP handlers

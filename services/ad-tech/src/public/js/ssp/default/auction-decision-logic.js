@@ -59,6 +59,11 @@ function scoreAd(
     trustedScoringSignals,
     browserSignals,
   });
+  realTimeReporting.contributeToHistogram({
+    bucket: 1234,
+    priorityWeight: 1,
+    latencyThreshold: 1,
+  });
   const {renderURL} = browserSignals;
   if (trustedScoringSignals && trustedScoringSignals.renderURL[renderURL]) {
     const parsedScoringSignals = JSON.parse(

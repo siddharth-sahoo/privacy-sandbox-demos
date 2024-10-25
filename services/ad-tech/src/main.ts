@@ -23,6 +23,7 @@ import {ScoringSignalsRouter} from './routes/ssp/scoring-signals-router.js';
 import {SellerContextualBidderRouter} from './routes/ssp/seller-contextual-bidder-router.js';
 import {SellerRouter} from './routes/ssp/seller-router.js';
 import {WellKnownAttributionReportingRouter} from './routes/well-known/well-known-attribution-reporting-router.js';
+import {WellKnownInterestGroupRouter} from './routes/well-known/well-known-interest-group-router.js';
 import {WellKnownPrivateAggregationRouter} from './routes/well-known/well-known-private-aggregation-router.js';
 import {AdsRouter} from './routes/common/ads-router.js';
 import {ReportRouter} from './routes/common/report-router.js';
@@ -46,6 +47,7 @@ app.use(
   '/.well-known/attribution-reporting',
   WellKnownAttributionReportingRouter,
 );
+app.use('/.well-known/interest-group', WellKnownInterestGroupRouter);
 app.use('/.well-known/private-aggregation', WellKnownPrivateAggregationRouter);
 
 app.use('/dsp', BuyerRouter);

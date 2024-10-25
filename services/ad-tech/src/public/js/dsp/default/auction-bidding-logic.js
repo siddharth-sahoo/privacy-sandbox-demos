@@ -181,6 +181,15 @@ function generateBid(
     trustedBiddingSignals,
     browserSignals,
   });
+  realTimeReporting.contributeToHistogram({
+    bucket: 1234,
+    priorityWeight: 0,
+    latencyThreshold: 1,
+  });
+  realTimeReporting.contributeToHistogram({
+    bucket: 1234,
+    priorityWeight: 1000,
+  });
   if ('true' !== trustedBiddingSignals['isActive']) {
     // Don't place a bid if campaign is inactive.
     log('not bidding since campaign is inactive', {
@@ -202,6 +211,10 @@ function generateBid(
       : getBidForDisplayAd(biddingContext);
   if (bid) {
     log('returning bid', {bid});
+    let i = 0;
+    while (i < 99999999) {
+      i++;
+    }
     return bid;
   }
 }

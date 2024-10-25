@@ -26,11 +26,18 @@ export const constructAuctionConfig = (context: {
   sellerSignals?: {[key: string]: any};
   perBuyerSignals?: {[key: string]: {[key: string]: string}};
 }) => {
+  // Gather buyers to integrate with as current host.
   const interestGroupBuyers = BUYER_HOSTS_TO_INTEGRATE_BY_SELLER_HOST.get(
     HOSTNAME!,
   )!.map((buyerHost) => {
     return new URL(`https://${buyerHost}:${EXTERNAL_PORT}`).toString();
   });
+  // Enable real-time monitoring for all integrated buyers.
+  const perBuyerRealTimeReportingConfig: {[key: string]: any} = {};
+  for (const buyer of interestGroupBuyers) {
+    perBuyerRealTimeReportingConfig[buyer] = {type: 'default-local-reporting'};
+  }
+  // Capture additional flags and signals from context.
   const useCase = context.useCase || 'default';
   const {isFencedFrame, auctionSignals, sellerSignals, perBuyerSignals} =
     context;
@@ -82,6 +89,13 @@ export const constructAuctionConfig = (context: {
         `https://${HOSTNAME}:${EXTERNAL_PORT}/ssp/vast.xml`,
       ).toString(),
     },
+    // ************************************************************************
+    // Feature: Real-time monitoring
+    // ************************************************************************
+    // Enable real-time monitoring for buyers.
+    perBuyerRealTimeReportingConfig,
+    // Enable real-time monitoring for the seller.
+    sellerRealTimeReportingConfig: {type: 'default-local-reporting'},
   };
   return auctionConfig;
 };
