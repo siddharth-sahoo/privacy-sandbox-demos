@@ -17,36 +17,9 @@
 
 import {NEWS_HOST, SHOP_HOST, TRAVEL_HOST} from '../lib/constants.js';
 
-// type: 2bit
-const SOURCE_TYPE: {[index: string]: number} = {
-  unknown: 0b00,
-  click: 0b10,
-  view: 0b11,
-};
-
-// advertiser: 16bit
-const ADVERTISER: {[index: string]: number} = {};
-ADVERTISER[SHOP_HOST as string] = 0b0;
-ADVERTISER[TRAVEL_HOST as string] = 0b1;
-
-// publisher:  16bit
-const PUBLISHER: {[index: string]: number} = {};
-PUBLISHER[NEWS_HOST as string] = 0b0;
-
-// dimension: 8bit
-const DIMENSION: {quantity: number; gross: number} = {
-  quantity: 0b0,
-  gross: 0b1,
-};
-
-// type 8bit
-const TRIGGER_TYPE = {
-  quantity: 0b1000_0000,
-  gross: 0b1100_0000,
-};
-
-export {SOURCE_TYPE, ADVERTISER, PUBLISHER, DIMENSION, TRIGGER_TYPE};
-
+// ****************************************************************************
+// EXPORTED TYPES
+// ****************************************************************************
 type AggregationKeyStructure = {
   type: number;
   advertiser: number;
@@ -54,13 +27,6 @@ type AggregationKeyStructure = {
   id: number;
   dimension: number;
 };
-
-export function sourceKeyPiece(ako: AggregationKeyStructure) {
-  console.log(ako);
-  const source = encodeSource(ako);
-  const uint64: bigint = new DataView(source).getBigUint64(0, false);
-  return `0x${(uint64 << 64n).toString(16)}`;
-}
 
 type AggregatableTriggerData = {
   type: number;
@@ -70,13 +36,42 @@ type AggregatableTriggerData = {
   option: number;
 };
 
-export function triggerKeyPiece(atd: AggregatableTriggerData) {
-  console.log(atd);
-  const trigger = encodeTrigger(atd);
-  const uint64 = new DataView(trigger).getBigUint64(0, false);
-  return `0x${'0'.repeat(16)}${uint64.toString(16)}`;
-}
+// ****************************************************************************
+// CONSTANTS
+// ****************************************************************************
+/** Map of source type to encoded 2-bit values. */
+export const SOURCE_TYPE_TO_ENCODED: {[index: string]: number} = {
+  unknown: 0b00,
+  click: 0b10,
+  view: 0b11,
+};
 
+/** Map of advertiser host to encoded 16-bit values. */
+export const ADVERTISER_TO_ENCODED: {[index: string]: number} = {
+  SHOP_HOST: 0b0,
+  TRAVEL_HOST: 0b1,
+};
+
+/** Map of publisher host to encoded 16-bit values. */
+export const PUBLISHER_TO_ENCODED: {[index: string]: number} = {
+  NEWS_HOST: 0b0,
+};
+
+/** Map of dimension name to encoded 8-bit values. */
+export const DIMENSION_TO_ENCODED: {[index: string]: number} = {
+  quantity: 0b0,
+  gross: 0b1,
+};
+
+/** Map of trigger type to encoded 8-bit values. */
+export const TRIGGER_TYPE_TO_ENCODED: {[index: string]: number} = {
+  quantity: 0b1000_0000,
+  gross: 0b1100_0000,
+};
+
+// ****************************************************************************
+// HELPER FUNCTIONS
+// ****************************************************************************
 // type:        2bit
 // dimension:   6bit
 // id:         24bit
@@ -134,33 +129,6 @@ function decodeTrigger(buffer: ArrayBuffer): AggregatableTriggerData {
   return {type, id, size, category, option};
 }
 
-export function decodeBucket(buffer: ArrayBuffer) {
-  const u8a = new Uint8Array(buffer);
-  const sourceBuf = u8a.slice(0, u8a.length / 2);
-  const source: AggregationKeyStructure = decodeSource(sourceBuf.buffer);
-  const triggerBuf = u8a.slice(u8a.length / 2, u8a.length);
-  const trigger: AggregatableTriggerData = decodeTrigger(triggerBuf.buffer);
-
-  const aggregation_keys: {[index: string]: string} = {};
-  aggregation_keys.type = key_from_value(SOURCE_TYPE, source.type);
-  aggregation_keys.dimension = key_from_value(DIMENSION, source.dimension);
-  aggregation_keys.id = source.id.toString(16);
-  aggregation_keys.advertiser = key_from_value(ADVERTISER, source.advertiser);
-  aggregation_keys.publisher = key_from_value(PUBLISHER, source.publisher);
-
-  const aggregatable_trigger_data: {[index: string]: string} = {};
-  aggregatable_trigger_data.type = key_from_value(TRIGGER_TYPE, trigger.type);
-  aggregatable_trigger_data.id = trigger.id.toString(16);
-  aggregatable_trigger_data.size = trigger.size.toString();
-  aggregatable_trigger_data.category = trigger.category.toString();
-  aggregatable_trigger_data.option = trigger.option.toString();
-
-  return {
-    aggregation_keys,
-    aggregatable_trigger_data,
-  };
-}
-
 export function sourceEventId() {
   // 64bit dummy value
   return Math.random().toString().substring(2).replace(/^0/, '');
@@ -175,22 +143,21 @@ function key_from_value(object: any, value: any) {
   const key: string = Object.keys(object).find(
     (key) => object[key] === value,
   ) as string;
-
   return key;
 }
 
 function test() {
-  const advertiser = ADVERTISER['shop'];
-  const publisher = PUBLISHER['news'];
+  const advertiser = ADVERTISER_TO_ENCODED['shop'];
+  const publisher = PUBLISHER_TO_ENCODED['news'];
   const id = 0xff;
-  const dimension = DIMENSION['gross'];
+  const dimension = DIMENSION_TO_ENCODED['gross'];
   const size = (26.5 - 20) * 10;
   const category = 1;
-  const source_type = SOURCE_TYPE.click;
-  const trigger_type = TRIGGER_TYPE.gross;
+  const source_type = SOURCE_TYPE_TO_ENCODED.click;
+  const trigger_type = TRIGGER_TYPE_TO_ENCODED.gross;
   const option = 2;
 
-  const source_key = sourceKeyPiece({
+  const source_key = encodeSourceKeyPiece({
     type: source_type,
     dimension,
     id,
@@ -199,7 +166,7 @@ function test() {
   });
   console.log({source_key});
 
-  const trigger_key = triggerKeyPiece({
+  const trigger_key = encodeTriggerKeyPiece({
     type: trigger_type,
     id,
     size,
@@ -227,4 +194,46 @@ function test() {
   console.log(decodeTrigger(trigger));
 }
 
-// test();
+// ****************************************************************************
+// EXPORTED FUNCTIONS
+// ****************************************************************************
+export function encodeSourceKeyPiece(ako: AggregationKeyStructure) {
+  console.log(ako);
+  const source = encodeSource(ako);
+  const uint64: bigint = new DataView(source).getBigUint64(0, false);
+  return `0x${(uint64 << 64n).toString(16)}`;
+}
+
+export function encodeTriggerKeyPiece(atd: AggregatableTriggerData) {
+  console.log(atd);
+  const trigger = encodeTrigger(atd);
+  const uint64 = new DataView(trigger).getBigUint64(0, false);
+  return `0x${'0'.repeat(16)}${uint64.toString(16)}`;
+}
+
+export function decodeBucket(buffer: ArrayBuffer) {
+  const u8a = new Uint8Array(buffer);
+  const sourceBuf = u8a.slice(0, u8a.length / 2);
+  const source: AggregationKeyStructure = decodeSource(sourceBuf.buffer);
+  const triggerBuf = u8a.slice(u8a.length / 2, u8a.length);
+  const trigger: AggregatableTriggerData = decodeTrigger(triggerBuf.buffer);
+
+  const aggregation_keys: {[index: string]: string} = {};
+  aggregation_keys.type = key_from_value(SOURCE_TYPE_TO_ENCODED, source.type);
+  aggregation_keys.dimension = key_from_value(DIMENSION_TO_ENCODED, source.dimension);
+  aggregation_keys.id = source.id.toString(16);
+  aggregation_keys.advertiser = key_from_value(ADVERTISER_TO_ENCODED, source.advertiser);
+  aggregation_keys.publisher = key_from_value(PUBLISHER_TO_ENCODED, source.publisher);
+
+  const aggregatable_trigger_data: {[index: string]: string} = {};
+  aggregatable_trigger_data.type = key_from_value(TRIGGER_TYPE_TO_ENCODED, trigger.type);
+  aggregatable_trigger_data.id = trigger.id.toString(16);
+  aggregatable_trigger_data.size = trigger.size.toString();
+  aggregatable_trigger_data.category = trigger.category.toString();
+  aggregatable_trigger_data.option = trigger.option.toString();
+
+  return {
+    aggregation_keys,
+    aggregatable_trigger_data,
+  };
+}

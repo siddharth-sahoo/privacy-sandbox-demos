@@ -226,6 +226,7 @@ function reportWin(
   browserSignals,
 ) {
   if (sellerSignals.buyer) {
+    // TODO: Get buyer host from buyer signals instead.
     CURR_HOST = sellerSignals.buyer.substring('https://'.length);
   }
   AUCTION_ID = auctionSignals.auctionId;

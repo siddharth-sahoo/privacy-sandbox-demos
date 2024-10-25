@@ -18,13 +18,13 @@ import {decodeDict} from 'structured-field-values';
 import {
   debugKey,
   sourceEventId,
-  sourceKeyPiece,
-  triggerKeyPiece,
-  ADVERTISER,
-  PUBLISHER,
-  DIMENSION,
-  SOURCE_TYPE,
-  TRIGGER_TYPE,
+  encodeSourceKeyPiece,
+  encodeTriggerKeyPiece,
+  ADVERTISER_TO_ENCODED,
+  PUBLISHER_TO_ENCODED,
+  DIMENSION_TO_ENCODED,
+  SOURCE_TYPE_TO_ENCODED,
+  TRIGGER_TYPE_TO_ENCODED,
 } from './arapi.js';
 
 export const handleAttributionTriggerRegistration = (
@@ -46,8 +46,8 @@ export const handleAttributionTriggerRegistration = (
     ],
     aggregatable_trigger_data: [
       {
-        key_piece: triggerKeyPiece({
-          type: TRIGGER_TYPE['quantity'],
+        key_piece: encodeTriggerKeyPiece({
+          type: TRIGGER_TYPE_TO_ENCODED['quantity'],
           id: parseInt(id, 16),
           size: Number(size),
           category: Number(category),
@@ -56,8 +56,8 @@ export const handleAttributionTriggerRegistration = (
         source_keys: ['quantity'],
       },
       {
-        key_piece: triggerKeyPiece({
-          type: TRIGGER_TYPE['gross'],
+        key_piece: encodeTriggerKeyPiece({
+          type: TRIGGER_TYPE_TO_ENCODED['gross'],
           id: parseInt(id, 16),
           size: Number(size),
           category: Number(category),
@@ -135,21 +135,21 @@ const registerAttributionSourceHeadersIfEligible = (
     req.headers['attribution-reporting-eligible'] as string,
   );
   // Determine source type.
-  let sourceType = SOURCE_TYPE.unknown;
+  let sourceType = SOURCE_TYPE_TO_ENCODED.unknown;
   if ('navigation-source' in attributionHeaders) {
     console.log(
       '[ARA] Registering a click attribution source: ',
       req.originalUrl,
     );
-    sourceType = SOURCE_TYPE.click;
+    sourceType = SOURCE_TYPE_TO_ENCODED.click;
   } else if ('event-source' in attributionHeaders) {
     console.log(
       '[ARA] Registering a view attribution source: ',
       req.originalUrl,
     );
-    sourceType = SOURCE_TYPE.view;
+    sourceType = SOURCE_TYPE_TO_ENCODED.view;
   }
-  if (SOURCE_TYPE.unknown === sourceType) {
+  if (SOURCE_TYPE_TO_ENCODED.unknown === sourceType) {
     console.log('[ARA] Request header is malformed: ', req.originalUrl);
     return false;
   }
@@ -165,19 +165,19 @@ const registerAttributionSourceHeadersIfEligible = (
     debug_key,
     debug_reporting: true, // Enable verbose debug reports.
     aggregation_keys: {
-      quantity: sourceKeyPiece({
-        type: SOURCE_TYPE[sourceType],
-        advertiser: ADVERTISER[advertiser],
-        publisher: PUBLISHER['news'],
+      quantity: encodeSourceKeyPiece({
+        type: SOURCE_TYPE_TO_ENCODED[sourceType],
+        advertiser: ADVERTISER_TO_ENCODED[advertiser],
+        publisher: PUBLISHER_TO_ENCODED['news'],
         id: Number(`0x${id}`),
-        dimension: DIMENSION['quantity'],
+        dimension: DIMENSION_TO_ENCODED['quantity'],
       }),
-      gross: sourceKeyPiece({
-        type: SOURCE_TYPE[sourceType],
-        advertiser: ADVERTISER[advertiser],
-        publisher: PUBLISHER['news'],
+      gross: encodeSourceKeyPiece({
+        type: SOURCE_TYPE_TO_ENCODED[sourceType],
+        advertiser: ADVERTISER_TO_ENCODED[advertiser],
+        publisher: PUBLISHER_TO_ENCODED['news'],
         id: Number(`0x${id}`),
-        dimension: DIMENSION['gross'],
+        dimension: DIMENSION_TO_ENCODED['gross'],
       }),
     },
   };
