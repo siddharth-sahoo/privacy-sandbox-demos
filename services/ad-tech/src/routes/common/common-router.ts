@@ -13,11 +13,11 @@
 
 import ejs from 'ejs';
 import express, {NextFunction, Request, Response} from 'express';
-import {DEMO_HOST_PREFIX} from '../../lib/constants.js';
 import {
-  getJavaScriptTemplateVariables,
-  getTemplateVariables,
-} from '../../lib/template-utils.js';
+  DEMO_HOST_PREFIX,
+  JAVASCRIPT_TEMPLATE_VARIABLES,
+} from '../../lib/constants.js';
+import {getTemplateVariables} from '../../lib/template-utils.js';
 
 /**
  * This router is responsible for registering HTTP headers, preflight requests,
@@ -70,7 +70,7 @@ CommonRouter.get('/js/*.js', (req: Request, res: Response) => {
     res.set('Permissions-Policy', 'run-ad-auction=(*)');
   }
   res.set('Content-Type', 'application/javascript');
-  const templateVariables = getJavaScriptTemplateVariables();
+  const templateVariables = JAVASCRIPT_TEMPLATE_VARIABLES;
   ejs.renderFile(filePath, templateVariables, (err, content) => {
     if (err) {
       console.log('Encountered error rendering static JS', {
@@ -106,9 +106,5 @@ CommonRouter.options('*', (req: Request, res: Response) => {
 
 /** Index page, not commonly used in tests. */
 CommonRouter.get('/', async (req: Request, res: Response) => {
-  if (req.hostname.includes('ssp')) {
-    res.render('ssp/index', getTemplateVariables());
-  } else {
-    res.render('dsp/index', getTemplateVariables());
-  }
+  res.render('index', getTemplateVariables());
 });

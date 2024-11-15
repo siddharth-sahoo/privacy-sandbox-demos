@@ -13,6 +13,12 @@
 
 import express, {Request, Response} from 'express';
 import {getAdTemplateVariables} from '../../lib/template-utils.js';
+import {
+  ADVERTISER_CONTEXTUAL,
+  EXTERNAL_PORT,
+  HOSTNAME,
+  TRAVEL_HOST,
+} from '../../lib/constants.js';
 
 /**
  * This router is responsible for handling requests to serve ads, i.e. the ad
@@ -27,6 +33,25 @@ export const AdsRouter = express.Router();
 // ************************************************************************
 // HTTP handlers
 // ************************************************************************
+/** Used as render URL for contextual ads or static ads. */
+AdsRouter.get('/contextual-ads', async (req: Request, res: Response) => {
+  const registerSourceUrl = new URL(
+    `https://${HOSTNAME}:${EXTERNAL_PORT}/attribution/register-source`,
+  );
+  registerSourceUrl.searchParams.append('advertiser', ADVERTISER_CONTEXTUAL);
+  const templateVariables = {
+    TITLE: `Contextual ads from ${ADVERTISER_CONTEXTUAL}`,
+    DESTINATION: new URL(`https://${TRAVEL_HOST}:${EXTERNAL_PORT}`).toString(),
+    CREATIVE: new URL( // Doughnut image.
+      `https://${HOSTNAME}:${EXTERNAL_PORT}/img/emoji_u1f369.svg`,
+    ).toString(),
+    ATTRIBUTION_SRC: registerSourceUrl.toString(),
+  };
+  console.log('Loading contextual ad', templateVariables);
+  res.render('contextual-ad-frame', templateVariables);
+});
+
+// PROTECTED AUDIENCE ADS
 /** Used as render URL in interest groups for display ads. */
 AdsRouter.get('/display-ads', async (req: Request, res: Response) => {
   const templateVariables = getAdTemplateVariables(req.query);
@@ -34,13 +59,6 @@ AdsRouter.get('/display-ads', async (req: Request, res: Response) => {
   res
     .set('Allow-Fenced-Frame-Automatic-Beacons', 'true')
     .render('display-ad-frame', templateVariables);
-});
-
-/** Used as render URL for contextual ads or static ads. */
-AdsRouter.get('/contextual-ads', async (req: Request, res: Response) => {
-  const templateVariables = getAdTemplateVariables(req.query);
-  console.log('Loading contextual ad', templateVariables);
-  res.render('contextual-ad-frame', templateVariables);
 });
 
 /** Used as render URL in interest groups for video ads. */
